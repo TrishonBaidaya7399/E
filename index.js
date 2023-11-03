@@ -11,8 +11,9 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.swu9d.mongodb.net/?retryWrites=true&w=majority`;
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.le87qu0.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -27,11 +28,34 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-
+    //create database and collection
     const productCollection = client.db('emaJohnDB').collection('products');
 
+     //post products by ids
+     app.post('/productByIds', async(req, res)=>{
+      const ids = req.body;
+      const idsWithObjectId = ids.map(id => new ObjectId(id))
+      const query = {
+        _id: {
+          $in : idsWithObjectId
+        }
+      }
+      const result = await productCollection.find(query).toArray();
+      console.log(idsWithObjectId)
+      res.send(result);
+    })
+
+    //get total number of products
+    app.get('/productscount', async(req, res)=>{
+      const count = await productCollection.estimatedDocumentCount();
+      res.send({count});
+    })
+    //get all products
     app.get('/products', async(req, res) => {
-        const result = await productCollection.find().toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      console.log('pagination query: ', req.query);
+        const result = await productCollection.find().skip(page * size).limit(size).toArray();
         res.send(result);
     })
 
